@@ -1,7 +1,7 @@
 # Hotel-Booking-Cancelation-Prediction
 
-**Hotel-cancellation-analysis
-Project for Syracuse University's School of Information Studies course IST687 (Introduction to Data Science)
+**Hotel-cancellation-analysis**
+**Project for Syracuse University's School of Information Studies course IST687 (Introduction to Data Science)**
 
 **Goal of the project**
 The overall goal of the case is to provide actionable insight, based on the data available.
