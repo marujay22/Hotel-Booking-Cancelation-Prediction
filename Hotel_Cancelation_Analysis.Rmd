@@ -1,0 +1,496 @@
+---
+title: "Jay"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+hotel_data<- read.csv("https://intro-datascience.s3.us-east-2.amazonaws.com/Resort01.csv")
+
+summary(hotel_data)
+# Mean of the people who have canceled their bookings is 0.28 %.
+# Mean of lead times is 92.68 which means a lot of people have canceled their 
+# bookings after waiting for more than three months.
+
+library(arules)
+library(kernlab)
+library(caret) 
+library(tidyverse)
+library(ggplot2)
+library(arulesViz)
+library(rworldmap)
+
+```
+
+
+```{r}
+is.na(hotel_data$Country)
+is.null(hotel_data)
+hotel_data<-hotel_data[hotel_data$Country!='NULL',]
+
+#eliminating null values
+```
+
+```{r}
+
+#creating a subset of hotel_data with people who have canceled their bookings
+
+hotel_data_subset <- subset(hotel_data, IsCanceled == "1", select = c(IsCanceled:TotalOfSpecialRequests))
+
+View(hotel_data_subset)
+
+summary(hotel_data_subset)
+
+# Mean of lead times is 128.8 which means people have canceled their bookings after lead time of more than four months.
+# Mean  of people who stay in weekend nights and have canceled their bookings is 1.336 which is very low.
+# mean of people who have been repeated guests is 0.01 which means very few who have canceled are repeated
+# mean of previous cancellations is 0.3468.
+# mean of changes in the booking for the people who have cancelled their bookings is 0.1533
+# mean of the people who cancleled their bookings but made some special requests beforehand is 0.4864
+
+hotel_dataNotCanceled <- subset(hotel_data, IsCanceled == "0", select = c(IsCanceled:TotalOfSpecialRequests))
+
+
+# Range for Canceled value hotel_data.
+hotel_data$LTCgroup <- cut(hotel_data$LeadTime, breaks=c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf))
+table(cut(hotel_data$LeadTime, breaks = c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf)))
+
+# Range for Not Canceled value hote_data.
+hotel_data$LTNCgroup <- cut(hotel_data$LeadTime, breaks=c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf))
+table(cut(hotel_data$LeadTime, breaks = c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf)))
+
+```
+
+
+```{r}
+# Cancellations vs Lead time
+library(RColorBrewer)
+bpLTC <- table(hotel_data$LTCgroup)
+FillColor <- brewer.pal(5, "Set2")
+barplot(bpLTC, cex.names = 0.40, col = FillColor, border = F, main = "Cancellations vs Lead Time",xlab="Lead Time Range")
+```
+
+```{r}
+# No cancellations vs Lead time
+library(RColorBrewer)
+bpLTNC <- table(hotel_data$LTNCgroup)
+FillColor <- brewer.pal(5, "Set2")
+barplot(bpLTNC, cex.names = 0.40, col = FillColor, border = F,xlab="Lead time Range",main="No Cancellations vs Lead Time")
+```
+
+```{r}
+
+#visualizatons with respect to different columns.
+hist(hotel_data$PreviousBookingsNotCanceled)
+
+
+boxplot(IsCanceled ~ StaysInWeekendNights, data = hotel_data)
+
+boxplot(IsCanceled ~ as.factor(MarketSegment) , data = hotel_data)
+
+ggplot(hotel_data, aes(x=IsCanceled)) + geom_histogram(color='white')
+
+boxplot(as.factor(DepositType) ~ IsCanceled, data = hotel_data)
+
+boxplot(as.factor(CustomerType) ~ IsCanceled, data = hotel_data)
+
+boxplot(IsRepeatedGuest ~ IsCanceled, data = hotel_data)
+
+boxplot(as.factor(Meal) ~ IsCanceled, data = hotel_data)
+
+boxplot(as.factor(Country) ~ IsCanceled, data = hotel_data)
+
+boxplot(LeadTime ~ IsCanceled, data = hotel_data)
+
+boxplot(StaysInWeekendNights ~ IsCanceled, data = hotel_data)
+
+boxplot(StaysInWeekNights ~ IsCanceled, data = hotel_data)
+
+boxplot(Adults ~ IsCanceled, data = hotel_data)
+
+boxplot(Children ~ IsCanceled, data = hotel_data)
+
+boxplot(Babies ~ IsCanceled, data = hotel_data)
+
+boxplot(BookingChanges ~ IsCanceled, data = hotel_data)
+
+boxplot(TotalOfSpecialRequests ~ IsCanceled, data = hotel_data)
+
+```
+
+```{r}
+table(hotel_data$IsCanceled)
+# table() shows the exact number of people who have/have not canceled their bookings
+
+#bar plot is a graphical visualization of people who have/have not canceled their bookings.
+barplot(table(hotel_data$IsCanceled),
+main="Cancellations",
+xlab="Cancel                                 Not Cancel",
+ylab="Count",
+border=F,
+col= c("#35d46f","#fa5555"),
+)
+```
+
+
+```{r}
+# Grouped Bar Plot
+library(RColorBrewer)
+
+View(hotel_data)
+
+
+hotel_data_deposit_type <- subset(hotel_data, DepositType="Refundable", select = c(IsCanceled:TotalOfSpecialRequests))
+
+counts <- table(hotel_data_deposit_type$DepositType,hotel_data_deposit_type$IsCanceled )
+barplot(counts, main="DepositType",
+  xlab="IsCanceled", legend = rownames(counts), beside=TRUE, col = c("darkblue"), title="Grouped Bar Chart for DepositType", border = F)
+# No deposit are cancelling the most
+```
+
+```{r}
+# Grouped Bar Plot
+counts <- table(hotel_data$MarketSegment, hotel_data$IsCanceled)
+FillColor <- brewer.pal(5, "Set2")
+barplot(counts, main="MarketSegment",
+  xlab="IsCanceled", col=c("darkblue","red","green","yellow","orange","black"),
+  legend = rownames(counts), beside=TRUE, border = F)
+# online TA are cancelling the most
+```
+
+
+```{r}
+# Grouped Bar Plot
+```
+
+
+```{r}
+# Grouped Bar Plot
+
+
+
+counts <- table(hotel_data$LeadTime,hotel_data$IsCanceled)
+FillColor <- brewer.pal(5, "Set2")
+barplot(counts, main="Lead Time",
+  xlab="IsCanceled", col=c("darkblue","red"),
+  legend = rownames(counts), beside=TRUE, border = F)
+# online TA are cancelling the most
+
+```
+
+
+```{r}
+# Grouped Bar Plot
+counts <- table(hotel_data$MarketSegment, hotel_data$DepositType)
+FillColor <- brewer.pal(5, "Set2")
+barplot(counts, main="MarketSegment",
+  xlab="DepositType", col= FillColor, border = F,
+  legend = rownames(counts), beside=TRUE)
+```
+
+```{r}
+# Grouped Bar Plot
+counts <- table(hotel_data$IsCanceled, hotel_data$RequiredCarParkingSpaces)
+barplot(counts, main="Required Car Parking Spaces",
+  xlab="CustomerType", col=c("darkblue","red"),
+  legend = rownames(counts), beside=TRUE, border = F,cex.names=0.8)
+
+
+```
+
+```{r}
+# Grouped Bar Plot
+counts <- table(hotel_data$IsCanceled, hotel_data$IsRepeatedGuest)
+barplot(counts, main="MarketSegment",
+  xlab="CustomerType", col=c("darkblue","red"),
+  legend = rownames(counts), beside=TRUE, border = F)
+
+```
+
+```{r}
+# Grouped Bar Plot
+counts <- table(hotel_data$IsCanceled, hotel_data$AssignedRoomType)
+barplot(counts, main="MarketSegment",
+  xlab="CustomerType", col=c("darkblue","red"),
+  legend = rownames(counts), beside=TRUE, border = F,cex.names=1)
+
+```
+
+
+```{r}
+barplot(table(hotel_data$MarketSegment),
+main="Market Segment",
+xlab="Market Segment",
+ylab="Count",
+border="red",
+col="blue",
+density=10
+)
+```
+
+```{r}
+#barplot
+MarketSegmentBP <- table(hotel_data$IsCanceled, hotel_data$MarketSegment)
+barplot(MarketSegmentBP, col=c("#35d46f","#fa5555"), names.arg=c("Complementary", "Corporate", "Direct", "Groups", "Online TA/TO", "OnlineTA"), border = F, legend = rownames(MarketSegmentBP), beside=TRUE, cex.names = 0.7)
+```
+
+```{r}
+# Subset = Groups
+MarketSegmentGroups <- subset(hotel_data, MarketSegment == "Groups", select = c(IsCanceled:TotalOfSpecialRequests)
+)
+MarketSegmentGroups
+View(MarketSegmentGroups)
+```
+
+```{r}
+# Surprisingly, Non-Refundable bookings have higher cancellations! 
+GroupsSSBP <- table(MarketSegmentGroups$IsCanceled, MarketSegmentGroups$DepositType)
+barplot(GroupsSSBP, col=c("#35d46f","#fa5555"), border = F, legend = rownames(GroupsSSBP), beside = TRUE)
+```
+
+
+```{r}
+# linear modelling based on deposit type w.r.t IsCanceled.
+lmOut1 <- lm(formula = IsCanceled ~ DepositType, data = MarketSegmentGroups)
+summary(lmOut1)
+```
+
+```{r}
+
+
+# linear modelling based on Lead Time w.r.t IsCanceled.
+lmOut2 <- lm(formula = IsCanceled ~ LeadTime, data = MarketSegmentGroups)
+summary(lmOut2)
+
+# Creating a range for Lead Time
+MarketSegmentGroups$LTgroup <- cut(MarketSegmentGroups$LeadTime, breaks=c(0,101,201,301,401,501,601,701,Inf))
+table(cut(MarketSegmentGroups$LeadTime, breaks = c(0,101,201,301,401,501,601,701,Inf)))
+```
+
+```{r}
+# Optional
+MarketSegmentGroupsCanceled <- subset(MarketSegmentGroups, IsCanceled == "1", select = c(IsCanceled:TotalOfSpecialRequests)
+)
+View(MarketSegmentGroupsCanceled)
+
+# Optional
+MarketSegmentGroupsCanceled$LTgroup <- cut(MarketSegmentGroupsCanceled$LeadTime, breaks=c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf))
+table(cut(MarketSegmentGroupsCanceled$LeadTime, breaks = c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf)))
+```
+
+```{r}
+# Range for the whole hotel_data.
+hotel_data$LT2group <- cut(hotel_data$LeadTime, breaks=c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf))
+table(cut(hotel_data$LeadTime, breaks = c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf)))
+```
+
+
+```{r}
+# Subsetting the hotel_data into Not canceled values.
+hotel_dataNotCanceled <- subset(hotel_data, IsCanceled == "0", select = c(IsCanceled:TotalOfSpecialRequests)
+)
+#View(hotel_dataNotCanceled)
+```
+
+```{r}
+# Range for Not Canceled value hotel_data.
+hotel_dataNotCanceled$LTNCgroup <- cut(hotel_dataNotCanceled$LeadTime, breaks=c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf))
+table(cut(hotel_dataNotCanceled$LeadTime, breaks = c(0,51,101,151,201,251,301,351,401,451,501,551,601,651,701,Inf)))
+```
+
+
+```{r}
+#Mutating data to produce useful columns and subsetting
+
+hotel_data$totalpeople <- (hotel_data$Adults + hotel_data$Children + hotel_data$Babies)
+hotel_data$roomassigndiff <- ifelse(hotel_data$ReservedRoomType== hotel_data$AssignedRoomType,0,1)
+hotel_data$kids <- (hotel_data$Babies + hotel_data$Children)
+hotel_data$family <- ifelse(hotel_data$kids>0,1,0)
+
+hotel_data$totalstaylength <- (hotel_data$StaysInWeekendNights + hotel_data$StaysInWeekNights)
+
+trainList <- createDataPartition(y=hotel_data$IsCanceled, p=0.7, list=FALSE)
+
+canceled <- filter(hotel_data, IsCanceled == 1)
+non_canceled <- filter(hotel_data, IsCanceled == 0)
+
+str(hotel_data)
+
+#linear model on all the variables
+linear_model <- lm(IsCanceled ~ DepositType + totalstaylength + totalpeople + MarketSegment + IsRepeatedGuest + PreviousCancellations + PreviousBookingsNotCanceled + roomassigndiff + BookingChanges + RequiredCarParkingSpaces + TotalOfSpecialRequests, data=hotel_data)
+summary(linear_model)
+
+```
+
+```{r}
+
+
+hotel_data_fac <- data.frame(IsCanceled = as.factor(hotel_data$IsCanceled),
+                             LeadTime = as.factor(hotel_data$LeadTime),
+                             StaysInWeekendNights = as.factor(hotel_data$StaysInWeekendNights),
+                             StaysInWeekNights = as.factor(hotel_data$StaysInWeekNights),
+                             Adults = as.factor(hotel_data$Adults),
+                             Children = as.factor(hotel_data$Children),
+                             Babies = as.factor(hotel_data$Babies),
+                             Meal = as.factor(hotel_data$Meal),
+                             Country = as.factor(hotel_data$Country),
+                             MarketSegment = as.factor(hotel_data$MarketSegment),
+                             IsRepeatedGuest = as.factor(hotel_data$IsRepeatedGuest),
+                             PreviousCancellations = as.factor(hotel_data$PreviousCancellations),
+                             PreviousBookingsNotCanceled = as.factor(hotel_data$PreviousBookingsNotCanceled),
+                             ReservedRoomType = as.factor(hotel_data$ReservedRoomType),
+                             AssignedRoomType = as.factor(hotel_data$AssignedRoomType),
+                             BookingChanges = as.factor(hotel_data$BookingChanges),
+                             DepositType = as.factor(hotel_data$DepositType),
+                             CustomerType = as.factor(hotel_data$CustomerType),
+                             RequiredCarParkingSpaces = as.factor(hotel_data$RequiredCarParkingSpaces),
+                             TotalOfSpecialRequests = as.factor(hotel_data$TotalOfSpecialRequests))
+
+CanceledBook <- table(hotel_data_fac$IsCanceled)
+prop.table(CanceledBook) #27.76335 Canceled Bookings
+
+hotel_data_tran <- as(hotel_data_fac, "transactions")
+itemFrequency(hotel_data_tran)
+itemFrequencyPlot(hotel_data_tran)
+```
+
+```{r}
+set.seed(11)
+trainList1 <- createDataPartition(y=hotel_data_fac$IsCanceled,p=.40,list=FALSE)
+#it is used to create a series of test partitions. Here it takes 40% of the rows
+#from the parent dataframe(39596 rows).It contains random indices from the
+#Class attribute
+
+trainSet1 <- hotel_data_fac[trainList1,]
+#creates a training dataset by subsetting the trainList
+testSet1 <- hotel_data_fac[-trainList1,]
+# creates a testing dataset by subsetting the trainList
+
+
+dim(trainSet1)
+dim(testSet1)
+
+#support vector machine model
+svm_model<-ksvm(IsCanceled~.,data=trainSet1,C=5,cross=3,prob.model=TRUE)
+
+
+pred_Out<-predict(svm_model,testSet1)
+
+pred_Out
+
+str(pred_Out)
+
+con_matrix_ksvm<-confusionMatrix(pred_Out,testSet1$IsCanceled)
+
+con_matrix_ksvm
+```
+
+
+```{r}
+#maps with respect to lead time
+avgLT <- hotel_data_subset %>% group_by(Country) %>% summarise(avgLeadTime = mean(LeadTime))
+sPDF <- joinCountryData2Map(avgLT, joinCode = "ISO3", nameJoinColumn = "Country")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(sPDF, nameColumnToPlot="avgLeadTime")
+
+
+#maps with respect to IsCanceled
+avgLT1 <- hotel_data_subset %>% group_by(Country) %>% summarise(avgLeadTime = mean(IsCanceled))
+sPDF <- joinCountryData2Map(avgLT1, joinCode = "ISO3", nameJoinColumn = "Country")
+par(mai=c(0,0,0.2,0),xaxs="i",yaxs="i")
+mapCountryData(sPDF)
+
+```
+
+```{r}
+#Data set with all variables as factors. Country column has null entries so havent modified that.
+hotel_data_fac1 <- data.frame(IsCanceled = as.factor(hotel_data$IsCanceled),
+                             LeadTime = as.factor(hotel_data$LeadTime),
+                             StaysInWeekendNights = as.factor(hotel_data$StaysInWeekendNights),
+                             StaysInWeekNights = as.factor(hotel_data$StaysInWeekNights),
+                             Adults = as.factor(hotel_data$Adults),
+                             Children = as.factor(hotel_data$Children),
+                             Babies = as.factor(hotel_data$Babies),
+                             Meal = as.factor(hotel_data$Meal),
+                             Country = as.factor(hotel_data$Country),
+                             MarketSegment = as.factor(hotel_data$MarketSegment),
+                             IsRepeatedGuest = as.factor(hotel_data$IsRepeatedGuest),
+                             PreviousCancellations = as.factor(hotel_data$PreviousCancellations),
+                             PreviousBookingsNotCanceled = as.factor(hotel_data$PreviousBookingsNotCanceled),
+                             ReservedRoomType = as.factor(hotel_data$ReservedRoomType),
+                             AssignedRoomType = as.factor(hotel_data$AssignedRoomType),
+                             BookingChanges = as.factor(hotel_data$BookingChanges),
+                             DepositType = as.factor(hotel_data$DepositType),
+                             CustomerType = as.factor(hotel_data$CustomerType),
+                             RequiredCarParkingSpaces = as.factor(hotel_data$RequiredCarParkingSpaces),
+                             TotalOfSpecialRequests = as.factor(hotel_data$TotalOfSpecialRequests))
+
+
+#Only numeric dataset.
+
+only_numeric_data<-data.frame(IsCanceled=as.factor(hotel_data$IsCanceled),
+                     Leadtime=as.factor(hotel_data$LeadTime),
+                     Weekend_Stay=as.factor(hotel_data$StaysInWeekendNights),
+                     Weekday_Stay=as.factor(hotel_data$StaysInWeekNights),
+                     Adults=as.factor(hotel_data$Adults),
+                     Children=as.factor(hotel_data$Children),
+                     Babies=as.factor(hotel_data$Babies),
+                     IsRepeatedGuest=as.factor(hotel_data$IsRepeatedGuest),
+                     PreviousCancellations=as.factor(hotel_data$PreviousCancellations),
+                     PreviousBookingsNotCancelled=as.factor(
+                       hotel_data$PreviousBookingsNotCanceled
+                     ),
+                     Booking_changes=as.factor(hotel_data$BookingChanges),
+                     RequiredCarParkingSpaces=as.factor(
+                       hotel_data$RequiredCarParkingSpaces),
+                     Special_requests=as.factor(hotel_data$TotalOfSpecialRequests))
+
+
+
+hotel_x<-as(hotel_data_fac1,'transactions')
+numeric_x<-as(only_numeric_data,'transactions')
+```
+
+
+```{r}
+inspect(hotel_x[1:10])
+```
+
+
+```{r}
+#For all variables.
+
+ruleset <- apriori(hotel_x, 
+parameter=list(supp=0.15, conf=0.58),
+control=list(verbose=F),
+appearance=list(default="lhs",rhs=("IsCanceled=1")))
+
+
+
+```
+
+
+```{r}
+
+#For numeric data only.
+ruleset1<- apriori(numeric_x, 
+parameter=list(supp=0.05
+               , conf=0.47),
+control=list(verbose=F),
+appearance=list(default="lhs",rhs=("IsCanceled=1")))
+```
+
+
+```{r}
+inspectDT(ruleset1)
+```
+
+
+```{r}
+inspectDT(ruleset)
+```
+
+
